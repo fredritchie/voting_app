@@ -25,7 +25,15 @@ cp terraform.tfvars.example terraform.tfvars
 ```
 
 Edit `terraform.tfvars` and make the organization, project, and workspace names
-match HCP Terraform exactly. Then authenticate to the target AWS account and run:
+match HCP Terraform exactly. Keep `github_oidc_subject_prefix` synchronized with
+the repository's GitHub Actions OIDC configuration. You can read it with:
+
+```sh
+gh api repos/OWNER/REPOSITORY/actions/oidc/customization/sub \
+  --jq .sub_claim_prefix
+```
+
+Then authenticate to the target AWS account and run:
 
 ```sh
 aws sts get-caller-identity

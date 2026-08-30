@@ -39,6 +39,12 @@ variable "github_repository" {
   default     = "fredritchie/voting_app"
 }
 
+variable "github_oidc_subject_prefix" {
+  description = "Exact OIDC subject prefix reported by GitHub for the repository, including immutable owner and repository IDs when configured."
+  type        = string
+  default     = "repo:fredritchie@130365973/voting_app@1351196751"
+}
+
 variable "github_actions_role_name" {
   description = "Name of the IAM role assumed by the deployment workflow."
   type        = string

@@ -9,6 +9,7 @@ role_name                   = "hcp-terraform-voting-app"
 application_role_name_prefix = "voting-app-production"
 
 github_repository        = "fredritchie/voting_app"
+github_oidc_subject_prefix = "repo:fredritchie@130365973/voting_app@1351196751"
 github_actions_role_name = "github-actions-voting-app"
 ecr_repository_prefix    = "voting-app"
 eks_cluster_name         = "voting-app-production"

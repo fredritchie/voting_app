@@ -23,8 +23,8 @@ data "aws_iam_policy_document" "github_actions_trust" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:environment:production",
-        "repo:${var.github_repository}:environment:staging",
+        "${var.github_oidc_subject_prefix}:environment:production",
+        "${var.github_oidc_subject_prefix}:environment:staging",
       ]
     }
   }
