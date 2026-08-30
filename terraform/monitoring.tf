@@ -141,7 +141,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure" {
           region = var.aws_region
           period = 300
           metrics = [
-            [{ expression = "SEARCH('{ContainerInsights,ClusterName,NodeName} MetricName=\"node_cpu_utilization\" ClusterName=\"${local.name}\"', 'Average', 300)", id = "nodecpu", label = "" }],
+            [{ expression = "SEARCH('{ContainerInsights,ClusterName,NodeName,InstanceId} MetricName=\"node_cpu_utilization\" ClusterName=\"${local.name}\"', 'Average', 300)", id = "nodecpu", label = "" }],
           ]
           view    = "timeSeries"
           stacked = false
@@ -161,7 +161,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure" {
           region = var.aws_region
           period = 300
           metrics = [
-            [{ expression = "SEARCH('{ContainerInsights,ClusterName,NodeName} MetricName=\"node_memory_utilization\" ClusterName=\"${local.name}\"', 'Average', 300)", id = "nodememory", label = "" }],
+            [{ expression = "SEARCH('{ContainerInsights,ClusterName,NodeName,InstanceId} MetricName=\"node_memory_utilization\" ClusterName=\"${local.name}\"', 'Average', 300)", id = "nodememory", label = "" }],
           ]
           view    = "timeSeries"
           stacked = false
