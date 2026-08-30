@@ -110,10 +110,11 @@ The `terraform-oidc-bootstrap` configuration remains a one-time local apply.
 It cannot be part of the remote pipeline because it creates the HCP Terraform
 role used by that pipeline.
 
-The EKS API is private/restricted. Register a Linux self-hosted GitHub Actions
-runner with the labels `self-hosted`, `linux`, and `deployment`, and place it in
-the VPC or behind an egress CIDR allowed by `eks_public_access_cidrs`. The runner
-needs Docker, Bash, and outbound HTTPS access; the workflow installs kubectl.
+The application deployment runs on a GitHub-hosted Ubuntu runner. The EKS public
+API endpoint must therefore accept connections from that runner. GitHub-hosted
+runner addresses are not stable enough for a small static allowlist, so this
+setup currently relies on the configured public-access CIDRs. AWS IAM and EKS
+access policies still authenticate and authorize the deployment role.
 
 Before the first deployment, apply `terraform-oidc-bootstrap`, set its
 `github_actions_role_arn` output as the HCP Terraform variable

@@ -139,10 +139,7 @@ jobs:
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop'))
     needs:
       - infrastructure-apply
-    runs-on:
-      - self-hosted
-      - linux
-      - deployment
+    runs-on: ubuntu-latest
     environment:
       name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
     concurrency:
