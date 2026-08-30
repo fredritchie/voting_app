@@ -1,15 +1,15 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = "1.16.0"
 
-  # HCP Terraform (formerly Terraform Cloud) owns and locks the state. Replace
-  # this organization name before running `terraform init`.
   cloud {
-    organization = "REPLACE_WITH_TFC_ORGANIZATION"
+    
+    organization = "ritchie-corp"
 
     workspaces {
-      name = "voting-application-production"
+      name = "Voting_app_CLI"
     }
   }
+
 
   required_providers {
     aws = {

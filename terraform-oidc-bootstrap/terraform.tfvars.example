@@ -1,0 +1,9 @@
+aws_region = "ap-south-1"
+
+# Both values are case-sensitive. Copy them exactly from HCP Terraform.
+hcp_terraform_organization = "ritchie-corp"
+hcp_terraform_project      = "voting-application-production"
+hcp_terraform_workspace    = "Voting_app_CLI"
+
+role_name                   = "hcp-terraform-voting-app"
+application_role_name_prefix = "voting-app-production"
