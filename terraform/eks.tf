@@ -49,6 +49,29 @@ resource "aws_eks_access_policy_association" "github_actions" {
   depends_on = [aws_eks_access_entry.github_actions]
 }
 
+resource "aws_eks_access_entry" "application_admin" {
+  for_each = var.eks_application_admin_principal_arns
+
+  cluster_name  = aws_eks_cluster.tf_eks_cluster.name
+  principal_arn = each.value
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "application_admin" {
+  for_each = var.eks_application_admin_principal_arns
+
+  cluster_name  = aws_eks_cluster.tf_eks_cluster.name
+  principal_arn = each.value
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
+
+  access_scope {
+    type       = "namespace"
+    namespaces = ["staging", "production"]
+  }
+
+  depends_on = [aws_eks_access_entry.application_admin]
+}
+
 resource "aws_eks_node_group" "tf_node_grp_1" {
   cluster_name    = aws_eks_cluster.tf_eks_cluster.name
   node_group_name = "${local.name}-1"

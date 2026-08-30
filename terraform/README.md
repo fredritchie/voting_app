@@ -35,6 +35,17 @@ runs this configuration remotely before the application deployment job. Keep
 as Terraform variables in the HCP workspace because ignored local `.tfvars`
 files are not present on a clean GitHub runner.
 
+To grant a local IAM user or role access to inspect workloads and use
+`kubectl port-forward`, add `eks_application_admin_principal_arns` as an HCL
+Terraform workspace variable. For example:
+
+```hcl
+["arn:aws:iam::008971653023:user/root"]
+```
+
+Configured principals receive `AmazonEKSAdminPolicy` only in the `staging` and
+`production` namespaces.
+
 Use [`terraform.tfvars.example`](terraform.tfvars.example) only as a non-secret local template. Never commit a real `terraform.tfvars` file.
 
 ## Design decisions

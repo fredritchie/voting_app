@@ -107,3 +107,17 @@ variable "github_actions_role_arn" {
     error_message = "github_actions_role_arn must be null or a valid AWS IAM role ARN."
   }
 }
+
+variable "eks_application_admin_principal_arns" {
+  description = "IAM user or role ARNs allowed to administer workloads in the staging and production Kubernetes namespaces."
+  type        = set(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for arn in var.eks_application_admin_principal_arns :
+      can(regex("^arn:aws:iam::[0-9]{12}:(user|role)/.+", arn))
+    ])
+    error_message = "eks_application_admin_principal_arns must contain valid IAM user or role ARNs."
+  }
+}
