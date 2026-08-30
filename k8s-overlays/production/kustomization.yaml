@@ -9,3 +9,24 @@ replicas:
     count: 3
   - name: worker
     count: 3
+patches:
+  - target:
+      kind: Service
+      name: vote
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: LoadBalancer
+      - op: replace
+        path: /spec/ports/0/port
+        value: 80
+  - target:
+      kind: Service
+      name: result
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: LoadBalancer
+      - op: replace
+        path: /spec/ports/0/port
+        value: 80
