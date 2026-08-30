@@ -17,7 +17,7 @@ spec:
       serviceAccountName: voting-app-database
       initContainers:
       - name: load-database-secret
-        image: public.ecr.aws/aws-cli/aws-cli:2
+        image: public.ecr.aws/aws-cli/aws-cli:latest
         command:
         - /bin/sh
         - -ec
