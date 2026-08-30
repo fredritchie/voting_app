@@ -20,6 +20,10 @@ It also creates three private ECR repositories (`vote`, `result`, and `worker`) 
 5. For GitHub Actions deployments, apply `../terraform-oidc-bootstrap` and add its `github_actions_role_arn` output as a Terraform workspace variable with the same name. This creates an EKS access entry for the deployment role.
 6. Commit this directory, connect the workspace to the repository with working directory `terraform`, and run a speculative plan before applying.
 
+Reapply `terraform-oidc-bootstrap` after upgrading an existing deployment so
+the HCP Terraform role can manage the inline least-privilege policy used by the
+application database Pod Identity role.
+
 For CLI-driven remote execution, run `terraform login`, then:
 
 ```sh
@@ -102,19 +106,22 @@ Use [`terraform.tfvars.example`](terraform.tfvars.example) only as a non-secret 
 
 ### RDS PostgreSQL
 
-- **RDS PostgreSQL replaces the in-cluster `db` deployment.** Application manifests must use the `rds_endpoint` output and retrieve its credentials from Secrets Manager rather than connect to hostname `db` with `postgres/postgres`.
+- **RDS PostgreSQL replaces the in-cluster `db` deployment.** The worker and result Pods use an EKS Pod Identity role to discover the RDS-managed secret, and an AWS CLI init container writes that secret to a memory-backed volume. The applications read the file at startup; the password is never committed or stored in a Kubernetes Secret object.
 - **Multi-AZ, encrypted gp3 storage, automatic backups, CloudWatch database logs, and Performance Insights** trade additional cost for availability, recovery, and operational visibility.
 - **Deletion protection is on by default.** Terraform cannot destroy the RDS instance until it is explicitly disabled. A final snapshot is requested for any permitted deletion; choose a unique final-snapshot identifier if recreating after a destroy.
 
-## Not included yet
+## Application database integration
 
-This layer intentionally does not deploy Kubernetes workloads. The existing Kubernetes manifests still point at local/sample components and must next be changed to:
+Terraform associates the `voting-app-database` service account in the
+`staging` and `production` namespaces with a dedicated Pod Identity role. That
+role can describe the configured RDS instance and read only its managed master
+secret. The deployment script supplies the AWS region and RDS instance
+identifier to the Kubernetes ConfigMap before applying the manifests.
 
-1. remove the in-cluster PostgreSQL deployment and service;
-2. give the worker and result services an RDS connection/secret configuration;
-3. publish images to the ECR repositories and replace the Docker Hub image references;
-4. add an AWS Load Balancer Controller/Ingress or other chosen external entry point;
-5. use External Secrets, the Secrets Store CSI driver, or a comparable mechanism to expose the RDS-managed secret to the Pods with least-privilege workload identity.
+The init-container approach loads credentials once when a Pod starts. Restart
+the worker and result Deployments after an RDS password rotation. A future
+enhancement can use the Secrets Store CSI Driver with rotation reconciliation
+and a verified RDS CA bundle.
 
 ## Cost and lifecycle note
 

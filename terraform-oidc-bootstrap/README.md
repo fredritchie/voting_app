@@ -86,6 +86,11 @@ terraform import aws_iam_openid_connect_provider.hcp_terraform \
 The GitHub Actions provider is shared with another stack in this account, so
 this configuration reads it as a data source and does not modify or import it.
 
+Reapply this bootstrap configuration before applying a main-infrastructure
+change that introduces the application database Pod Identity role. The
+bootstrap policy grants HCP Terraform permission to manage a scoped inline role
+policy under `application_role_name_prefix`.
+
 The service actions intentionally use broad wildcards because Terraform must
 create, read, update, and delete these resource types. IAM role management and
 role passing remain restricted to `application_role_name_prefix`.

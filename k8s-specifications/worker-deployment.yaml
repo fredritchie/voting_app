@@ -14,6 +14,46 @@ spec:
       labels:
         app: worker
     spec:
+      serviceAccountName: voting-app-database
+      initContainers:
+      - name: load-database-secret
+        image: public.ecr.aws/aws-cli/aws-cli:2
+        command:
+        - /bin/sh
+        - -ec
+        args:
+        - |
+          aws rds describe-db-instances \
+            --db-instance-identifier "$DB_INSTANCE_IDENTIFIER" \
+            --query 'DBInstances[0].{host:Endpoint.Address,port:Endpoint.Port}' \
+            --output json > "$DB_METADATA_FILE"
+          secret_arn="$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_INSTANCE_IDENTIFIER" \
+            --query 'DBInstances[0].MasterUserSecret.SecretArn' \
+            --output text)"
+          test -n "$secret_arn" && test "$secret_arn" != "None"
+          aws secretsmanager get-secret-value \
+            --secret-id "$secret_arn" \
+            --query SecretString \
+            --output text > "$DB_SECRET_FILE"
+          chmod 0440 "$DB_METADATA_FILE" "$DB_SECRET_FILE"
+        envFrom:
+        - configMapRef:
+            name: database-config
+        volumeMounts:
+        - name: database-secret
+          mountPath: /var/run/voting-app-database
       containers:
       - image: dockersamples/examplevotingapp_worker
         name: worker
+        envFrom:
+        - configMapRef:
+            name: database-config
+        volumeMounts:
+        - name: database-secret
+          mountPath: /var/run/voting-app-database
+          readOnly: true
+      volumes:
+      - name: database-secret
+        emptyDir:
+          medium: Memory

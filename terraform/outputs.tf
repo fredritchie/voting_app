@@ -24,6 +24,11 @@ output "rds_port" {
   value       = aws_db_instance.postgres.port
 }
 
+output "rds_instance_identifier" {
+  description = "RDS instance identifier used by the workloads to discover the managed secret."
+  value       = aws_db_instance.postgres.identifier
+}
+
 output "rds_master_secret_arn" {
   description = "Secrets Manager ARN holding the RDS-managed master credentials."
   value       = aws_db_instance.postgres.master_user_secret[0].secret_arn

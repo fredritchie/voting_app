@@ -153,6 +153,7 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       ECR_REPOSITORY_PREFIX: ${{ vars.ECR_REPOSITORY_PREFIX || 'voting-app' }}
       EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'voting-app-production' }}
+      RDS_INSTANCE_IDENTIFIER: ${{ vars.RDS_INSTANCE_IDENTIFIER || 'voting-app-production-postgres' }}
       KUBERNETES_NAMESPACE: ${{ vars.KUBERNETES_NAMESPACE || (github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging')) }}
       DEPLOYMENT_ENVIRONMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
       IMAGE_TAG: ${{ github.sha }}

@@ -3,6 +3,7 @@ var express = require('express'),
     { Pool } = require('pg'),
     cookieParser = require('cookie-parser'),
     path = require('path'),
+    loadDatabaseConfig = require('./database'),
     collectVotesFromResult = require('./votes'),
     app = express(),
     server = require('http').Server(app),
@@ -19,9 +20,7 @@ io.on('connection', function (socket) {
   });
 });
 
-var pool = new Pool({
-  connectionString: 'postgres://postgres:postgres@db/postgres'
-});
+var pool = new Pool(loadDatabaseConfig());
 
 async.retry(
   {times: 1000, interval: 1000},

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+data:
+  AWS_REGION: REPLACE_AWS_REGION
+  AWS_DEFAULT_REGION: REPLACE_AWS_REGION
+  DB_INSTANCE_IDENTIFIER: REPLACE_RDS_INSTANCE_IDENTIFIER
+  DB_NAME: voting
+  DB_METADATA_FILE: /var/run/voting-app-database/metadata.json
+  DB_SECRET_FILE: /var/run/voting-app-database/secret.json

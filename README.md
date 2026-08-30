@@ -88,6 +88,7 @@ Settings > Environments**. Add these environment variables to both:
 - `EKS_CLUSTER_NAME`: normally `voting-app-production`;
 - `ECR_REPOSITORY_PREFIX`: normally `voting-app`;
 - `KUBERNETES_NAMESPACE`: `staging` or `production`.
+- `RDS_INSTANCE_IDENTIFIER`: normally `voting-app-production-postgres`.
 
 Configure required reviewers on the `production` environment. The deployment
 job uses GitHub OIDC, so it does not need AWS access-key secrets.
@@ -120,6 +121,14 @@ Before the first deployment, apply `terraform-oidc-bootstrap`, set its
 `github_actions_role_arn` output as the HCP Terraform variable
 `github_actions_role_arn`, and apply the main `terraform` configuration. This
 creates the EKS access entry used by the deployment role.
+
+The Kubernetes worker and result Deployments use the `voting-app-database`
+service account. EKS Pod Identity gives that account a narrowly scoped role
+that can discover the RDS-managed master secret. An init container writes the
+secret to a memory-backed volume, and the application containers use it to
+connect to the private `voting` PostgreSQL database with TLS enabled. The
+legacy in-cluster PostgreSQL Deployment and Service are deleted only after the
+RDS-backed application rollouts succeed.
 
 ## Notes
 
