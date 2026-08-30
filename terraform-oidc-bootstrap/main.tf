@@ -129,10 +129,12 @@ data "aws_iam_policy_document" "infrastructure" {
   }
 
   statement {
-    sid       = "ReadRequiredServiceLinkedRoles"
-    effect    = "Allow"
-    actions   = ["iam:GetRole",
-                "iam:ListInstanceProfilesForRole"]
+    sid    = "ReadRequiredServiceLinkedRoles"
+    effect = "Allow"
+    actions = [
+      "iam:GetRole",
+      "iam:ListInstanceProfilesForRole",
+    ]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"]
   }
 
