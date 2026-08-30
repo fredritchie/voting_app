@@ -46,6 +46,36 @@ Terraform workspace variable. For example:
 Configured principals receive `AmazonEKSAdminPolicy` only in the `staging` and
 `production` namespaces.
 
+## Monitoring and centralized logging
+
+The `amazon-cloudwatch-observability` EKS add-on runs the CloudWatch agent and
+Fluent Bit. It uses EKS Pod Identity through a dedicated
+`<cluster>-cloudwatch-agent` role, so telemetry credentials are not granted
+to every workload on a node. The add-on sends these streams to CloudWatch Logs:
+
+- `/aws/containerinsights/<cluster>/application`: container stdout/stderr;
+- `/aws/containerinsights/<cluster>/dataplane`: kubelet, container runtime,
+  kube-proxy, and VPC CNI logs;
+- `/aws/containerinsights/<cluster>/host`: operating-system logs;
+- `/aws/containerinsights/<cluster>/performance`: Container Insights telemetry.
+
+Terraform applies `monitoring_log_retention_days` to all four groups; the
+default is 30 days. EKS control-plane logs remain in
+`/aws/eks/<cluster>/cluster`, and PostgreSQL/upgrade logs use their RDS-managed
+CloudWatch log groups.
+
+Two CloudWatch dashboards are created:
+
+- `<cluster>-infrastructure`: EKS node health/CPU/memory, RDS CPU/connections,
+  NAT traffic, and recent control-plane errors;
+- `<cluster>-application`: staging/production pod counts, CPU, memory, restarts,
+  vote/error log-derived metrics, log volume, and recent application errors.
+
+Run `terraform output cloudwatch_dashboard_urls` after apply to open them. New
+Container Insights series and log-derived metrics can take several minutes to
+appear after the add-on becomes active. CloudWatch ingestion, dashboards,
+Application Signals, and Logs Insights queries incur AWS charges.
+
 Use [`terraform.tfvars.example`](terraform.tfvars.example) only as a non-secret local template. Never commit a real `terraform.tfvars` file.
 
 ## Design decisions

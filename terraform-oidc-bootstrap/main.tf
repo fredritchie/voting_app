@@ -54,6 +54,10 @@ data "aws_iam_policy_document" "infrastructure" {
       "ebs:*",
       "ecr:*",
       "eks:*",
+      "cloudwatch:DeleteDashboards",
+      "cloudwatch:GetDashboard",
+      "cloudwatch:ListDashboards",
+      "cloudwatch:PutDashboard",
       "logs:*",
       "rds:*",
     ]
@@ -95,6 +99,7 @@ data "aws_iam_policy_document" "infrastructure" {
       values = [
         "ec2.amazonaws.com",
         "eks.amazonaws.com",
+        "pods.eks.amazonaws.com",
       ]
     }
   }

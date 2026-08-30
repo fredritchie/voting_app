@@ -34,3 +34,16 @@ output "ecr_repository_urls" {
   description = "ECR repository URLs for vote, result, and worker images."
   value       = { for name, repository in aws_ecr_repository.application : name => repository.repository_url }
 }
+
+output "cloudwatch_dashboard_urls" {
+  description = "CloudWatch infrastructure and application dashboard URLs."
+  value = {
+    infrastructure = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.infrastructure.dashboard_name}"
+    application    = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.application.dashboard_name}"
+  }
+}
+
+output "container_insights_log_groups" {
+  description = "Central CloudWatch log groups populated by the EKS observability add-on."
+  value       = { for stream, group in aws_cloudwatch_log_group.container_insights : stream => group.name }
+}
