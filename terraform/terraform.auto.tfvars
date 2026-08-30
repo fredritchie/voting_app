@@ -5,3 +5,4 @@ deletion_protection     = false
 eks_application_admin_principal_arns = [
   "arn:aws:iam::008971653023:user/root",
 ]
+hcp_terraform_project=voting_app_infra

@@ -30,7 +30,7 @@ resource "aws_db_instance" "postgres" {
   backup_retention_period   = var.db_backup_retention_days
   copy_tags_to_snapshot     = true
   deletion_protection       = var.deletion_protection
-  skip_final_snapshot       = false
+  skip_final_snapshot       = true
   final_snapshot_identifier = "${local.name}-postgres-final"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
