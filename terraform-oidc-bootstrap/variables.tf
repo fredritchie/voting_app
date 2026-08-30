@@ -33,6 +33,30 @@ variable "application_role_name_prefix" {
   default     = "voting-app-production"
 }
 
+variable "github_repository" {
+  description = "GitHub repository in owner/name form permitted to deploy from protected environments."
+  type        = string
+  default     = "fredritchie/voting_app"
+}
+
+variable "github_actions_role_name" {
+  description = "Name of the IAM role assumed by the deployment workflow."
+  type        = string
+  default     = "github-actions-voting-app"
+}
+
+variable "ecr_repository_prefix" {
+  description = "ECR repository path prefix used by the application images."
+  type        = string
+  default     = "voting-app"
+}
+
+variable "eks_cluster_name" {
+  description = "EKS cluster the GitHub Actions deployment role may discover."
+  type        = string
+  default     = "voting-app-production"
+}
+
 variable "tags" {
   description = "Tags applied to the OIDC provider, role, and policy."
   type        = map(string)

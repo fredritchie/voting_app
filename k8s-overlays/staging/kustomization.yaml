@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../k8s-specifications
+replicas:
+  - name: vote
+    count: 1
+  - name: result
+    count: 1
+  - name: worker
+    count: 1
+patches:
+  - target:
+      kind: Service
+      name: vote
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/nodePort
+        value: 32000
+  - target:
+      kind: Service
+      name: result
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/nodePort
+        value: 32001

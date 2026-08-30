@@ -16,10 +16,37 @@ resource "aws_eks_cluster" "tf_eks_cluster" {
 
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster,
     aws_cloudwatch_log_group.eks,
   ]
+}
+
+resource "aws_eks_access_entry" "github_actions" {
+  count = var.github_actions_role_arn == null ? 0 : 1
+
+  cluster_name  = aws_eks_cluster.tf_eks_cluster.name
+  principal_arn = var.github_actions_role_arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "github_actions" {
+  count = var.github_actions_role_arn == null ? 0 : 1
+
+  cluster_name  = aws_eks_cluster.tf_eks_cluster.name
+  principal_arn = var.github_actions_role_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.github_actions]
 }
 
 resource "aws_eks_node_group" "tf_node_grp_1" {

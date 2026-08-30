@@ -2,8 +2,13 @@ aws_region = "ap-south-1"
 
 # Both values are case-sensitive. Copy them exactly from HCP Terraform.
 hcp_terraform_organization = "ritchie-corp"
-hcp_terraform_project      = "voting-application-production"
+hcp_terraform_project      = "voting_app_infra"
 hcp_terraform_workspace    = "Voting_app_CLI"
 
 role_name                   = "hcp-terraform-voting-app"
 application_role_name_prefix = "voting-app-production"
+
+github_repository        = "fredritchie/voting_app"
+github_actions_role_name = "github-actions-voting-app"
+ecr_repository_prefix    = "voting-app"
+eks_cluster_name         = "voting-app-production"

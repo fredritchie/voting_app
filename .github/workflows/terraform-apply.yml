@@ -1,0 +1,42 @@
+name: Terraform Apply
+
+on:
+  workflow_call:
+    secrets:
+      TF_API_TOKEN:
+        description: HCP Terraform API token with permission to run the Voting_app_CLI workspace
+        required: true
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hcp-terraform-voting-app-production
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply infrastructure in HCP Terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.0
+          terraform_wrapper: false
+      - name: Initialize HCP Terraform workspace
+        run: terraform init -input=false
+      - name: Validate configuration
+        run: terraform validate
+      - name: Create remote execution plan
+        run: terraform plan -input=false -out=tfplan
+      - name: Apply the reviewed plan
+        run: terraform apply -input=false -auto-approve tfplan

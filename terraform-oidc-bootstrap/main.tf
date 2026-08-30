@@ -74,6 +74,7 @@ data "aws_iam_policy_document" "infrastructure" {
       "iam:TagRole",
       "iam:UntagRole",
       "iam:UpdateAssumeRolePolicy",
+      "iam:GetRole",
     ]
     resources = [
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.application_role_name_prefix}-*",
@@ -125,6 +126,14 @@ data "aws_iam_policy_document" "infrastructure" {
         "rds.amazonaws.com",
       ]
     }
+  }
+
+  statement {
+    sid       = "ReadRequiredServiceLinkedRoles"
+    effect    = "Allow"
+    actions   = ["iam:GetRole",
+                "iam:ListInstanceProfilesForRole"]
+    resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"]
   }
 
   statement {

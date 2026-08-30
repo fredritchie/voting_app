@@ -15,3 +15,8 @@ output "hcp_terraform_workspace_environment_variables" {
     TFC_AWS_RUN_ROLE_ARN  = aws_iam_role.hcp_terraform.arn
   }
 }
+
+output "github_actions_role_arn" {
+  description = "Set this as AWS_ROLE_ARN in the staging and production GitHub environments."
+  value       = aws_iam_role.github_actions.arn
+}

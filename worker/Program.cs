@@ -25,7 +25,6 @@ namespace Worker
                 var keepAliveCommand = pgsql.CreateCommand();
                 keepAliveCommand.CommandText = "SELECT 1";
 
-                var definition = new { vote = "", voter_id = "" };
                 while (true)
                 {
                     // Slow down to prevent CPU spike, only query each 100ms
@@ -40,8 +39,8 @@ namespace Worker
                     string json = redis.ListLeftPopAsync("votes").Result;
                     if (json != null)
                     {
-                        var vote = JsonConvert.DeserializeAnonymousType(json, definition);
-                        Console.WriteLine($"Processing vote for '{vote.vote}' by '{vote.voter_id}'");
+                        var vote = JsonConvert.DeserializeObject<VoteMessage>(json);
+                        Console.WriteLine($"Processing vote for '{vote.Vote}' by '{vote.VoterId}'");
                         // Reconnect DB if down
                         if (!pgsql.State.Equals(System.Data.ConnectionState.Open))
                         {
@@ -50,7 +49,7 @@ namespace Worker
                         }
                         else
                         { // Normal +1 vote requested
-                            UpdateVote(pgsql, vote.voter_id, vote.vote);
+                            UpdateVote(pgsql, vote.VoterId, vote.Vote);
                         }
                     }
                     else

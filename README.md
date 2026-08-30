@@ -56,6 +56,70 @@ kubectl delete -f k8s-specifications/
 * A [Postgres](https://hub.docker.com/_/postgres/) database backed by a Docker volume
 * A [Node.js](/result) web app which shows the results of the voting in real time
 
+## CI/CD
+
+The GitHub Actions workflow in `.github/workflows/ci-cd.yml` runs the Python,
+Node.js, and .NET test suites, validates Terraform and Kubernetes configuration,
+and builds all three application images on every pull request and push. For a
+deployment, it then calls `.github/workflows/terraform-apply.yml`; application
+images are published and deployed only after that infrastructure apply succeeds.
+
+Deployment behavior is intentionally branch and environment based:
+
+| Trigger | GitHub environment | Kubernetes namespace | Deployment |
+| --- | --- | --- | --- |
+| Push to `develop` | `staging` | environment variable or `staging` | Automatic after CI |
+| Push to `main` | `production` | environment variable or `production` | After production environment approval |
+| Manual dispatch | Selected environment | environment variable or selection | After CI and environment rules |
+
+Staging uses NodePorts `32000`/`32001`; production retains `31000`/`31001`,
+avoiding cluster-wide NodePort collisions when both namespaces are deployed.
+
+Images are pushed to the three ECR repositories with the immutable Git commit
+SHA as the tag. The deployment script renders the Kubernetes manifests with
+those exact images, applies the staging or production replica overlay, and waits
+for every Deployment rollout.
+
+Create `staging` and `production` environments under **GitHub repository
+Settings > Environments**. Add these environment variables to both:
+
+- `AWS_ROLE_ARN`: the `github_actions_role_arn` bootstrap output;
+- `AWS_REGION`: for example `ap-south-1`;
+- `EKS_CLUSTER_NAME`: normally `voting-app-production`;
+- `ECR_REPOSITORY_PREFIX`: normally `voting-app`;
+- `KUBERNETES_NAMESPACE`: `staging` or `production`.
+
+Configure required reviewers on the `production` environment. The deployment
+job uses GitHub OIDC, so it does not need AWS access-key secrets.
+
+Create a repository Actions secret named `TF_API_TOKEN` containing an HCP
+Terraform user or team token that can plan and apply the `Voting_app_CLI`
+workspace. This token authenticates the Terraform CLI to HCP Terraform; AWS
+access inside the remote run still uses the short-lived HCP OIDC role.
+
+The infrastructure workflow runs this sequence:
+
+```text
+terraform init
+terraform validate
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+The `terraform-oidc-bootstrap` configuration remains a one-time local apply.
+It cannot be part of the remote pipeline because it creates the HCP Terraform
+role used by that pipeline.
+
+The EKS API is private/restricted. Register a Linux self-hosted GitHub Actions
+runner with the labels `self-hosted`, `linux`, and `deployment`, and place it in
+the VPC or behind an egress CIDR allowed by `eks_public_access_cidrs`. The runner
+needs Docker, Bash, and outbound HTTPS access; the workflow installs kubectl.
+
+Before the first deployment, apply `terraform-oidc-bootstrap`, set its
+`github_actions_role_arn` output as the HCP Terraform variable
+`github_actions_role_arn`, and apply the main `terraform` configuration. This
+creates the EKS access entry used by the deployment role.
+
 ## Notes
 
 The voting application only accepts one vote per client browser. It does not register additional votes if a vote has already been submitted from a client.

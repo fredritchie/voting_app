@@ -17,7 +17,8 @@ It also creates three private ECR repositories (`vote`, `result`, and `worker`) 
 2. Replace `REPLACE_WITH_TFC_ORGANIZATION` in `versions.tf` with that organization name. The `cloud` block is the current HCP Terraform state integration; do not add an S3, `remote`, or other `backend` block alongside it.
 3. Configure AWS credentials in the HCP Terraform workspace. Prefer HCP Terraform dynamic provider credentials with AWS IAM OIDC over long-lived access keys. The AWS identity needs permission to create the resources defined here.
 4. Add `aws_region` and `eks_public_access_cidrs` as HCP Terraform workspace variables. Mark only genuinely secret values as sensitive; this configuration deliberately has no database password input.
-5. Commit this directory, connect the workspace to the repository with working directory `terraform`, and run a speculative plan before applying.
+5. For GitHub Actions deployments, apply `../terraform-oidc-bootstrap` and add its `github_actions_role_arn` output as a Terraform workspace variable with the same name. This creates an EKS access entry for the deployment role.
+6. Commit this directory, connect the workspace to the repository with working directory `terraform`, and run a speculative plan before applying.
 
 For CLI-driven remote execution, run `terraform login`, then:
 
@@ -26,6 +27,13 @@ cd terraform
 terraform init
 terraform plan
 ```
+
+For GitHub Actions, add an HCP Terraform API token as the repository secret
+`TF_API_TOKEN`. The reusable `.github/workflows/terraform-apply.yml` workflow
+runs this configuration remotely before the application deployment job. Keep
+`aws_region`, `eks_public_access_cidrs`, and `github_actions_role_arn` configured
+as Terraform variables in the HCP workspace because ignored local `.tfvars`
+files are not present on a clean GitHub runner.
 
 Use [`terraform.tfvars.example`](terraform.tfvars.example) only as a non-secret local template. Never commit a real `terraform.tfvars` file.
 

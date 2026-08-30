@@ -1,0 +1,222 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy from the selected commit
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  vote-tests:
+    name: Vote tests (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: vote/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r vote/requirements.txt
+      - name: Run tests
+        run: python -m unittest discover -s vote/tests -v
+
+  result-tests:
+    name: Result tests (Node.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: result
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: result/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  worker-tests:
+    name: Worker tests (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "7.0.x"
+      - name: Restore
+        run: dotnet restore worker/tests/Worker.Tests.csproj
+      - name: Test
+        run: dotnet test worker/tests/Worker.Tests.csproj --configuration Release --no-restore
+
+  terraform-checks:
+    name: Terraform checks (${{ matrix.directory }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - terraform
+          - terraform-oidc-bootstrap
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.0
+      - name: Check formatting
+        run: terraform fmt -check -recursive "${{ matrix.directory }}"
+      - name: Initialize providers without remote state
+        run: terraform -chdir="${{ matrix.directory }}" init -backend=false
+      - name: Validate
+        run: terraform -chdir="${{ matrix.directory }}" validate
+
+  kubernetes-checks:
+    name: Kubernetes manifest checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-kubectl@v4
+      - name: Render staging
+        run: kubectl kustomize k8s-overlays/staging >/dev/null
+      - name: Render production
+        run: kubectl kustomize k8s-overlays/production >/dev/null
+      - name: Check deployment script syntax
+        run: bash -n scripts/deploy.sh
+
+  container-builds:
+    name: Build ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - vote
+          - result
+          - worker
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: false
+          tags: voting-app/${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  infrastructure-apply:
+    name: Apply infrastructure
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop'))
+    needs:
+      - vote-tests
+      - result-tests
+      - worker-tests
+      - terraform-checks
+      - kubernetes-checks
+      - container-builds
+    uses: ./.github/workflows/terraform-apply.yml
+    secrets:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
+  release:
+    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop'))
+    needs:
+      - infrastructure-apply
+    runs-on:
+      - self-hosted
+      - linux
+      - deployment
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+    concurrency:
+      group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      ECR_REPOSITORY_PREFIX: ${{ vars.ECR_REPOSITORY_PREFIX || 'voting-app' }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'voting-app-production' }}
+      KUBERNETES_NAMESPACE: ${{ vars.KUBERNETES_NAMESPACE || (github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging')) }}
+      DEPLOYMENT_ENVIRONMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check environment configuration
+        run: |
+          test -n "$AWS_ROLE_ARN" || {
+            echo "Set AWS_ROLE_ARN in the $DEPLOYMENT_ENVIRONMENT GitHub environment" >&2
+            exit 1
+          }
+      - uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: existing-images
+        name: Find images already published for this commit
+        run: |
+          for service in vote result worker; do
+            if aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY_PREFIX/$service" \
+              --image-ids "imageTag=$IMAGE_TAG" >/dev/null 2>&1; then
+              echo "$service=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$service=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and push vote
+        if: steps.existing-images.outputs.vote != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./vote
+          push: true
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}/vote:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=vote
+          cache-to: type=gha,mode=max,scope=vote
+      - name: Build and push result
+        if: steps.existing-images.outputs.result != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./result
+          push: true
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}/result:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=result
+          cache-to: type=gha,mode=max,scope=result
+      - name: Build and push worker
+        if: steps.existing-images.outputs.worker != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker
+          push: true
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}/worker:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+      - uses: azure/setup-kubectl@v4
+      - name: Configure EKS access
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+      - name: Deploy immutable images
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: scripts/deploy.sh

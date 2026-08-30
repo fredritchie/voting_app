@@ -95,3 +95,15 @@ variable "deletion_protection" {
   type        = bool
   default     = true
 }
+
+variable "github_actions_role_arn" {
+  description = "Optional IAM role ARN used by GitHub Actions to deploy workloads to this EKS cluster."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.github_actions_role_arn == null || can(regex("^arn:aws:iam::[0-9]{12}:role/.+", var.github_actions_role_arn))
+    error_message = "github_actions_role_arn must be null or a valid AWS IAM role ARN."
+  }
+}

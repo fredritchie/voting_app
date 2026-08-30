@@ -2,6 +2,8 @@ var express = require('express'),
     async = require('async'),
     { Pool } = require('pg'),
     cookieParser = require('cookie-parser'),
+    path = require('path'),
+    collectVotesFromResult = require('./votes'),
     app = express(),
     server = require('http').Server(app),
     io = require('socket.io')(server);
@@ -51,16 +53,6 @@ function getVotes(client) {
 
     setTimeout(function() {getVotes(client) }, 1000);
   });
-}
-
-function collectVotesFromResult(result) {
-  var votes = {a: 0, b: 0};
-
-  result.rows.forEach(function (row) {
-    votes[row.vote] = parseInt(row.count);
-  });
-
-  return votes;
 }
 
 app.use(cookieParser());

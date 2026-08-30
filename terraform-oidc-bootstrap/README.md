@@ -9,6 +9,9 @@ This standalone Terraform configuration creates:
   resources in `../terraform`;
 - scoped IAM role management and `iam:PassRole` access for application roles;
 - the permissions RDS needs to create its managed master-password secret.
+- an environment-scoped deployment role using the account's existing GitHub
+  Actions OIDC provider;
+- ECR push and EKS discovery permissions for the deployment workflow.
 
 ## Bootstrap
 
@@ -50,16 +53,30 @@ variables**, not Terraform variables:
 
 The values are identifiers, not secrets, so they do not need the Sensitive flag.
 
+Also obtain the GitHub Actions role:
+
+```sh
+terraform output github_actions_role_arn
+```
+
+Add this ARN as the `AWS_ROLE_ARN` variable in both the `staging` and
+`production` GitHub environments. Set the same ARN as the HCP Terraform
+**Terraform variable** `github_actions_role_arn`, then apply the main
+configuration so EKS grants the role Kubernetes API access.
+
 ## Existing OIDC provider
 
-An AWS account can already have an `app.terraform.io` provider, for example from
-HCP Terraform Quick Setup. If `terraform plan` reports that the provider exists,
-import it rather than creating a duplicate:
+An AWS account can already have the HCP Terraform OIDC provider. If
+`terraform plan` reports that it exists, import it rather than creating a
+duplicate:
 
 ```sh
 terraform import aws_iam_openid_connect_provider.hcp_terraform \
   arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/app.terraform.io
 ```
+
+The GitHub Actions provider is shared with another stack in this account, so
+this configuration reads it as a data source and does not modify or import it.
 
 The service actions intentionally use broad wildcards because Terraform must
 create, read, update, and delete these resource types. IAM role management and
