@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
       - name: Render staging
         run: kubectl kustomize k8s-overlays/staging >/dev/null
       - name: Render production
@@ -211,7 +211,7 @@ jobs:
           tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}/worker:${{ env.IMAGE_TAG }}
           cache-from: type=gha,scope=worker
           cache-to: type=gha,mode=max,scope=worker
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
       - name: Configure EKS access
         run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
       - name: Deploy immutable images
