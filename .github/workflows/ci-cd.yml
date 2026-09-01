@@ -108,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: ./${{ matrix.service }}
           push: false
@@ -186,7 +186,7 @@ jobs:
       - uses: docker/setup-buildx-action@v4
       - name: Build and push vote
         if: steps.existing-images.outputs.vote != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./vote
           push: true
@@ -195,7 +195,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=vote
       - name: Build and push result
         if: steps.existing-images.outputs.result != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./result
           push: true
@@ -204,7 +204,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=result
       - name: Build and push worker
         if: steps.existing-images.outputs.worker != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./worker
           push: true
